@@ -22,6 +22,7 @@ import datetime
 
 verbose = True
 actionjsonURL = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.json"
+cachePath = "cache/"
 # TODO server configurable
 
 
@@ -58,39 +59,32 @@ def parse_json(json):
     :rtype: (str|unicode, str|unicode)
     """
     note("parsing JSON")
-    nodeID = json.get("showNode")
-    nodeURL = json.get("nodeURL")
-    note("nodeID: {0}, nodeURL: {1}".format(nodeID, nodeURL))
+    nid = json.get("showNode")
+    nurl = json.get("nodeURL")
+    note("nodeID: {0}, nodeURL: {1}".format(nid, nurl))
     note("parsing JSON DONE")
-    return nodeID, nodeURL
+    return nid, nurl
 
+def update_node(nid, nurl):
+    """update the current node in the cache
 
-if __name__ == '__main__':
-    note("starting...")
-    # TODO http auth
-
-    actionjson = fetch_json(actionjsonURL)
-
-    nodeID, nodeURL = parse_json(actionjson)
-
+    Does nothing if the cache is up to date (uses the HTTP If-Modified-Since-header)
+    :param nid: identifier of the node
+    :param nurl: url of the node
+    """
     note("updating node")
-    nodeURL = nodeURL
-    nodeID = nodeID
-    doFetch = False
     try:
-        # TODO timezones...
-        mTime = os.path.getmtime("cache/{0}-timestamp".format(nodeID))
-        formTime = note(datetime.datetime.utcfromtimestamp(mTime).strftime("%a, %d %b %Y %H:%M:%S GMT"))
-        headers = {'If-Modified-Since': formTime}
+        modified = os.path.getmtime(cachePath + "{0}-timestamp".format(nid))
     except OSError:
-        note("timestamp file for {0} does not exist".format(nodeID))
-        formTime = datetime.datetime.fromtimestamp(0).strftime("%a, %d %b %Y %H:%M:%S GMT")
-        headers = {'If-Modified-Since': formTime}
+        note("timestamp file for {0} does not exist".format(nid))
+        modified = 0
 
-    r = requests.get(nodeURL, headers=headers, stream=True)
-    note(r.headers)
-    note(r.status_code)
-    # TODO update node function
+    time = datetime.datetime.utcfromtimestamp(modified).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    headers = {'If-Modified-Since': time}
+    note("Will send If-Modified-Since: {0}".format(time))
+
+    r = requests.get(nurl, headers=headers, stream=True)
+
     stat = r.status_code
     if stat == 200:
         """get file and save it to cache"""
@@ -103,11 +97,23 @@ if __name__ == '__main__':
         pass
     else:
         raise Exception("Fetching the node {id} from {url} has failed with HTTP error {error}.".format(
-            id=nodeID,
-            url=nodeURL,
+            id=nid,
+            url=nurl,
             error=stat
         ))
     note("updating node DONE")
+
+
+if __name__ == '__main__':
+    note("starting...")
+    # TODO http auth
+
+    actionjson = fetch_json(actionjsonURL)
+
+    nodeID, nodeURL = parse_json(actionjson)
+
+    update_node(nodeID, nodeURL)
+
     # TODO deploy node
     # cache/id nach run verschieben
     # TODO Fehlernode im Fehlerfall deployen (in eine Textdatei die Fehlermeldung schreiben, damit der node was anziegen kann)
