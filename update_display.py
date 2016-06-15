@@ -17,9 +17,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import requests
+import os
+import datetime
 
 verbose = True
-actionjson = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.json"
+actionjsonURL = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.json"
 # TODO server configurable
 
 
@@ -31,6 +33,7 @@ def note(text):
     """
     if verbose:
         print(text)
+    return text
 
 
 def fetch_json(url):
@@ -46,20 +49,66 @@ def fetch_json(url):
     note("fetching JSON DONE")
     return json
 
+def parse_json(json):
+    """parses the json file containing the current action
+
+    :param json: JSON file from fetch_json
+    :type json: dict
+    :return: tuple of nodeID and nodeURL
+    :rtype: (str|unicode, str|unicode)
+    """
+    note("parsing JSON")
+    nodeID = json.get("showNode")
+    nodeURL = json.get("nodeURL")
+    note("nodeID: {0}, nodeURL: {1}".format(nodeID, nodeURL))
+    note("parsing JSON DONE")
+    return nodeID, nodeURL
+
 
 if __name__ == '__main__':
     note("starting...")
     # TODO http auth
 
-    json = fetch_json(actionjson)
+    actionjson = fetch_json(actionjsonURL)
 
-    note("parsing JSON")
-    nodeID = json.get("showNode")
-    nodePath = json.get("nodeURL")
-    note("nodeID: {0}, nodeURL: {1}".format(nodeID, nodePath))
-    note("parsing JSON DONE")
+    nodeID, nodeURL = parse_json(actionjson)
 
+    note("updating node")
+    nodeURL = nodeURL
+    nodeID = nodeID
+    doFetch = False
+    try:
+        # TODO timezones...
+        mTime = os.path.getmtime("cache/{0}-timestamp".format(nodeID))
+        formTime = note(datetime.datetime.utcfromtimestamp(mTime).strftime("%a, %d %b %Y %H:%M:%S GMT"))
+        headers = {'If-Modified-Since': formTime}
+    except OSError:
+        note("timestamp file for {0} does not exist".format(nodeID))
+        formTime = datetime.datetime.fromtimestamp(0).strftime("%a, %d %b %Y %H:%M:%S GMT")
+        headers = {'If-Modified-Since': formTime}
+
+    r = requests.get(nodeURL, headers=headers, stream=True)
+    note(r.headers)
+    note(r.status_code)
     # TODO update node function
+    stat = r.status_code
+    if stat == 200:
+        """get file and save it to cache"""
+        # falls update notwendig
+        # cache/id-timestamp touchen
+        # node holen und in cache/id entpacken
+        pass
+    elif stat == 304:
+        """file is cached"""
+        pass
+    else:
+        raise Exception("Fetching the node {id} from {url} has failed with HTTP error {error}.".format(
+            id=nodeID,
+            url=nodeURL,
+            error=stat
+        ))
+    note("updating node DONE")
     # TODO deploy node
+    # cache/id nach run verschieben
     # TODO Fehlernode im Fehlerfall deployen (in eine Textdatei die Fehlermeldung schreiben, damit der node was anziegen kann)
     # vielleicht auch mit try catch den fehlerfall deployen
