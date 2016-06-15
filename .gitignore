@@ -1,3 +1,10 @@
+# Compiled Python
+*.pyc
+
+# IDE and file browser
+.idea/
+*.directory
+
 # Compiled Lua sources
 luac.out
 
