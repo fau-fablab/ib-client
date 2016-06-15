@@ -22,7 +22,7 @@ import datetime
 
 verbose = True
 actionjsonURL = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.json"
-cachePath = "cache/"
+cachePath = "cache"
 # TODO server configurable
 
 
@@ -35,6 +35,13 @@ def note(text):
     if verbose:
         print(text)
     return text
+
+def touch(fname):
+    """equivalent to UNIX 'touch'"""
+    try:
+        os.utime(fname, None)
+    except OSError:
+        open(fname, 'a').close()
 
 
 def fetch_json(url):
@@ -73,8 +80,12 @@ def update_node(nid, nurl):
     :param nurl: url of the node
     """
     note("updating node")
+    timestampfile = "{cache}/{id}-timestamp".format(
+            cache=cachePath,
+            id=nid
+    )
     try:
-        modified = os.path.getmtime(cachePath + "{0}-timestamp".format(nid))
+        modified = os.path.getmtime(timestampfile)
     except OSError:
         note("timestamp file for {0} does not exist".format(nid))
         modified = 0
@@ -84,16 +95,25 @@ def update_node(nid, nurl):
     note("Will send If-Modified-Since: {0}".format(time))
 
     r = requests.get(nurl, headers=headers, stream=True)
+    note("Response headers for {url}:\n{headers}".format(
+        url=nurl,
+        headers=r.headers
+    ))
 
     stat = r.status_code
     if stat == 200:
-        """get file and save it to cache"""
-        # falls update notwendig
-        # cache/id-timestamp touchen
-        # node holen und in cache/id entpacken
+        # get file and save it to cache
+        try:
+            os.mkdir(cachePath)
+        except OSError:
+            note("cache-path already exists")
+        touch(timestampfile)
+        # TODO node holen und in cache/id entpacken
+        note("A new version of the node {0} has been fetched.".format(nid))
         pass
     elif stat == 304:
-        """file is cached"""
+        # file is cached
+        note("The node {0} will be used from cache.".format(nid))
         pass
     else:
         raise Exception("Fetching the node {id} from {url} has failed with HTTP error {error}.".format(
