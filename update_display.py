@@ -5,7 +5,7 @@ This script fetches a JSON which describes the node that should be shown.
 The node gets then checked and, if necessary, fetched or updated.
 As a last step the script swaps the old with the new node and returns with success or failure.
 
-:author: `Patrick Kanzler <patrick.kanzler@fau.fablab.de>`_ and `Michael Zapf <michi.zapf@fau.de>`_
+:author: `Patrick Kanzler <patrick.kanzler@fau.fablab.de>`_ and `Michael Zapf <michael.zapf@fau.de>`_
 :organization: `FAU FabLab <https://github.com/fau-fablab>`_
 :copyright: Copyright (c) 2016 authors
 :license: MIT License
@@ -19,7 +19,7 @@ from __future__ import unicode_literals
 import requests
 
 verbose = True
-actionjson = "http://10.188.64.146/ib-client/sample_action.json"
+actionjson = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.json"
 # TODO server configurable
 
 
