@@ -22,13 +22,19 @@ import shutil
 import datetime
 import tarfile
 
+########################################################################
+# TODO make these values configurable
 verbose = True
 actionjsonURL = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.json"
-# TODO server configurable
+
 cachePath = "cache"
 stagePath = "stage"
 errorNodePath = "samplecontent/errornode"
 
+user = "TODO"
+password = "tralala"
+auth = (user, password)
+#########################################################################
 
 def get_nodepath(cachePath, nid):
     """get the nodepath
@@ -66,7 +72,7 @@ def fetch_json(url):
     :rtype: dict
     """
     note("fetching JSON")
-    r = requests.get(url)
+    r = requests.get(url, auth=auth)
     json = r.json()
     r.raise_for_status()
     note("fetching JSON DONE")
@@ -124,7 +130,7 @@ def update_node(nid, nurl):
     headers = {'If-Modified-Since': time}
     note("Will send If-Modified-Since: {0}".format(time))
 
-    r = requests.get(nurl, headers=headers, stream=True)
+    r = requests.get(nurl, headers=headers, stream=True, auth=auth)
     note("Response headers for {url}:\n{headers}\n".format(
         url=nurl,
         headers=r.headers
@@ -175,7 +181,6 @@ def deploy_node(nid):
 
 if __name__ == '__main__':
     note("starting...")
-    # TODO http auth
 
     try:
         actionjson = fetch_json(actionjsonURL)
