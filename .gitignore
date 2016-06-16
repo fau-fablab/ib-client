@@ -1,5 +1,6 @@
-# cache
+# cache and stage area
 cache/
+stage/
 
 # Compiled Python
 *.pyc

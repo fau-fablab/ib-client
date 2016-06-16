@@ -18,13 +18,26 @@ from __future__ import unicode_literals
 
 import requests
 import os
+import shutil
 import datetime
 import tarfile
 
 verbose = True
 actionjsonURL = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.json"
-cachePath = "cache"
 # TODO server configurable
+cachePath = "cache"
+stagePath = "stage"
+errorNodePath = "samplecontent/errornode"
+
+
+def get_nodepath(cachePath, nid):
+    """get the nodepath
+    """
+    node_path = "{cache}/{id}".format(
+        cache=cachePath,
+        id=nid
+    )
+    return node_path
 
 
 def note(text):
@@ -83,10 +96,7 @@ def unpack_node(r, nid):
     :type r: requests.Response
     :param nid: identifier of the node
     """
-    node_path = "{cache}/{id}/".format(
-        cache=cachePath,
-        id=nid
-    )
+    node_path = get_nodepath(cachePath, nid)
     tar = tarfile.open(mode='r|gz', fileobj=r.raw)
     tar.extractall(node_path)
     note("unpacked the node {id} to {path}".format(
@@ -103,10 +113,7 @@ def update_node(nid, nurl):
     :param nurl: url of the node
     """
     note("updating node")
-    timestampfile = "{cache}/{id}-timestamp".format(
-        cache=cachePath,
-        id=nid
-    )
+    timestampfile = "{0}-timestamp".format(get_nodepath(cachePath, nid))
     try:
         modified = os.path.getmtime(timestampfile)
     except OSError:
@@ -145,17 +152,42 @@ def update_node(nid, nurl):
     note("updating node DONE")
 
 
+def deploy_node(nid):
+    """deploy a node to the stage directory
+
+    The node ID 'error' is magic! It will deploy an error-node.
+    :param nid: id of the node that will be deployed
+    """
+    try:
+        shutil.rmtree(stagePath)
+    except OSError:
+        note("staging directory ({0}) does not exist".format(stagePath))
+    if nid == "error":
+        node_path = errorNodePath
+    else:
+        node_path = get_nodepath(cachePath, nid)
+    shutil.copytree(node_path, "{0}".format(stagePath))
+    note("deployed node {id} to {stage}".format(
+        id=nid,
+        stage=stagePath
+    ))
+
+
 if __name__ == '__main__':
     note("starting...")
     # TODO http auth
 
-    actionjson = fetch_json(actionjsonURL)
-
-    nodeID, nodeURL = parse_json(actionjson)
-
-    update_node(nodeID, nodeURL)
-
-    # TODO deploy node
-    # cache/id nach run verschieben
-    # TODO Fehlernode im Fehlerfall deployen (in eine Textdatei die Fehlermeldung schreiben, damit der node was anziegen kann)
-    # vielleicht auch mit try catch den fehlerfall deployen
+    try:
+        actionjson = fetch_json(actionjsonURL)
+        nodeID, nodeURL = parse_json(actionjson)
+        update_node(nodeID, nodeURL)
+        deploy_node(nodeID)
+    except Exception as e:
+        message = "An uncatched exception occured:\n{type}:{obj}".format(
+            type=type(e),
+            obj=e
+        )
+        note(message)
+        deploy_node("error")
+        with open("{0}/error.txt".format(stagePath), 'w') as f:
+            f.write(message)
