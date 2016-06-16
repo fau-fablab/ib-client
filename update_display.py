@@ -19,6 +19,7 @@ from __future__ import unicode_literals
 import requests
 import os
 import datetime
+import tarfile
 
 verbose = True
 actionjsonURL = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.json"
@@ -35,6 +36,7 @@ def note(text):
     if verbose:
         print(text)
     return text
+
 
 def touch(fname):
     """equivalent to UNIX 'touch'"""
@@ -57,6 +59,7 @@ def fetch_json(url):
     note("fetching JSON DONE")
     return json
 
+
 def parse_json(json):
     """parses the json file containing the current action
 
@@ -72,6 +75,26 @@ def parse_json(json):
     note("parsing JSON DONE")
     return nid, nurl
 
+
+def unpack_node(r, nid):
+    """unpack a node from a requests object
+
+    :param r: request object
+    :type r: requests.Response
+    :param nid: identifier of the node
+    """
+    node_path = "{cache}/{id}/".format(
+        cache=cachePath,
+        id=nid
+    )
+    tar = tarfile.open(mode='r|gz', fileobj=r.raw)
+    tar.extractall(node_path)
+    note("unpacked the node {id} to {path}".format(
+        id=nid,
+        path=node_path
+    ))
+
+
 def update_node(nid, nurl):
     """update the current node in the cache
 
@@ -81,8 +104,8 @@ def update_node(nid, nurl):
     """
     note("updating node")
     timestampfile = "{cache}/{id}-timestamp".format(
-            cache=cachePath,
-            id=nid
+        cache=cachePath,
+        id=nid
     )
     try:
         modified = os.path.getmtime(timestampfile)
@@ -95,7 +118,7 @@ def update_node(nid, nurl):
     note("Will send If-Modified-Since: {0}".format(time))
 
     r = requests.get(nurl, headers=headers, stream=True)
-    note("Response headers for {url}:\n{headers}".format(
+    note("Response headers for {url}:\n{headers}\n".format(
         url=nurl,
         headers=r.headers
     ))
@@ -107,14 +130,12 @@ def update_node(nid, nurl):
             os.mkdir(cachePath)
         except OSError:
             note("cache-path already exists")
+        unpack_node(r, nid)
         touch(timestampfile)
-        # TODO node holen und in cache/id entpacken
         note("A new version of the node {0} has been fetched.".format(nid))
-        pass
     elif stat == 304:
         # file is cached
         note("The node {0} will be used from cache.".format(nid))
-        pass
     else:
         raise Exception("Fetching the node {id} from {url} has failed with HTTP error {error}.".format(
             id=nid,
