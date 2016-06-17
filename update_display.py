@@ -30,6 +30,7 @@ actionjsonURL = "https://user.fablab.fau.de/~ew24uped/ib-client/sample_action.js
 cachePath = "cache"
 stagePath = "stage"
 errorNodePath = "samplecontent/errornode"
+expectedAPIVersion = 1
 
 user = "TODO"
 password = "tralala"
@@ -90,6 +91,9 @@ def parse_json(json):
     note("parsing JSON")
     nid = json.get("showNode")
     nurl = json.get("nodeURL")
+    version = json.get("APIVersion")
+    if version != expectedAPIVersion:
+        raise Exception("The API version of the JSON file does not match!")
     note("nodeID: {0}, nodeURL: {1}".format(nid, nurl))
     note("parsing JSON DONE")
     return nid, nurl

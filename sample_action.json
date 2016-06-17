@@ -1,4 +1,5 @@
 {
   "showNode": "test",
-  "nodeURL": "https://user.fablab.fau.de/~ew24uped/ib-client/test1.tar.gz"
+  "nodeURL": "https://user.fablab.fau.de/~ew24uped/ib-client/test1.tar.gz",
+  "APIVersion": 1
 }
